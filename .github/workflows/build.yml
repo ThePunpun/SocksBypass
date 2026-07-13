@@ -1,0 +1,40 @@
+name: Build SocksBypass IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Checkout code (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: List available schemes (diagnostic)
+        run: xcodebuild -list -project SocksBypass.xcodeproj
+
+      - name: Build unsigned app
+        run: |
+          xcodebuild -project SocksBypass.xcodeproj \
+            -scheme SocksBypass \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            archive -archivePath build/SocksBypass.xcarchive
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/SocksBypass.xcarchive/Products/Applications/*.app Payload/
+          zip -r SocksBypass.ipa Payload
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SocksBypass-ipa
+          path: SocksBypass.ipa
